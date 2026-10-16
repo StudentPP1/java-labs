@@ -12,12 +12,16 @@ public class TransactionStreamAnalyzer {
 
     // Знайти першу транзакцію, що перевищує заданий ліміт
     public Optional<Transaction> findFirstHighValueTransaction(Stream<Transaction> stream, BigDecimal threshold) {
+        requireNonNull(stream, "stream");
+        requireNonNull(threshold, "threshold");
         return stream.filter(t -> t.amount().compareTo(threshold) > 0).findFirst();
     }
 
     // Вибрати транзакції зі стріму, поки їхня сума
     // не перевищує ліміт
     public List<Transaction> takeTransactionsUntilBudgetExceeded(Stream<Transaction> stream, BigDecimal maxBudget) {
+        requireNonNull(stream, "stream");
+        requireNonNull(maxBudget, "maxBudget");
         AtomicReference<BigDecimal> currentBudget = new AtomicReference<>(BigDecimal.ZERO);
         return stream.takeWhile(transaction -> {
             currentBudget.updateAndGet(v -> v.add(transaction.amount()));
@@ -29,7 +33,20 @@ public class TransactionStreamAnalyzer {
     // на фіксовані вікна (батчі) розміром batchSize
     // з обмеженням кількості батчів
     public List<List<Transaction>> processBatches(Stream<Transaction> stream, int batchSize, int maxBatches) {
+        requireNonNull(stream, "stream");
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("batchSize must be greater than 0");
+        }
+        if (maxBatches <= 0) {
+            throw new IllegalArgumentException("maxBatches must be greater than 0");
+        }
         return stream.gather(fixedWindow(batchSize)).limit(maxBatches).toList();
+    }
+
+    private static void requireNonNull(Object value, String name) {
+        if (value == null) {
+            throw new IllegalArgumentException(name + " cannot be null");
+        }
     }
 
     private static <T> Gatherer<T, ?, List<T>> fixedWindow(int size) {
